@@ -1,43 +1,57 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import CartContext from "./cart-context";
 
 const CartProvider = (props) => {
-  const [items, updateItems] = useState([]);
-  const [totalAmt, updateTotalAmt] = useState(0);
+  const [items, setItems] = useState([]);
+  const totalAmount = useMemo(
+    () =>
+      items.reduce(
+        (prev, currentValue) =>
+          prev + currentValue?.price * currentValue?.quantity,
+        0
+      ),
+    [items]
+  );
 
   const addItemToCartHandler = (item) => {
-    let isSameItem = false;
-
-    items.map((itemin) => {
-      if (itemin.id === item.id) {
-        isSameItem = true;
-
-        item.quantity = (itemin.quantity - 0 + (item.quantity - 0)).toString();
-
-        items.splice(items.indexOf(itemin), 1);
-
-        updateTotalAmt(totalAmt + (item.quantity - 1) * item.price);
-
-        updateItems([...items, item]);
-      }
-    });
-
-    if (!isSameItem) {
-      updateItems([...items, item]);
-      updateTotalAmt(totalAmt + item.price * item.quantity);
+    const itemIndex = items.findIndex((el) => el.id === item.id);
+    if (itemIndex === -1) {
+      setItems((prev) => [...prev, item]);
+      return;
     }
+
+    const updatedItems = items.map((el) => {
+      if (el.id === item.id) {
+        return {
+          ...item,
+          quantity: Number(item.quantity) + Number(el.quantity),
+        };
+      }
+      return el;
+    });
+    setItems(updatedItems);
   };
 
-  const removeItemFromCartHandler = (id) => {};
+  const removeItemFromCartHandler = (id) => {
+    const filterItems = items
+      .map((item) => {
+        if (item.id === id) {
+          return { ...item, quantity: Number(item.quantity) - 1 };
+        }
+        return item;
+      })
+      .filter((item) => item.quantity >= 1);
+    setItems(filterItems);
+  };
 
   const cartContext = {
     items: items,
-    totalAmount: totalAmt,
+    totalAmount,
     addItem: addItemToCartHandler,
     removeItem: removeItemFromCartHandler,
   };
- 
+
   return (
     <CartContext.Provider value={cartContext}>
       {props.children}
